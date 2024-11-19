@@ -1,0 +1,27 @@
+/**
+ * Convert incoming CSV data (with tab-separated values) into a range and add it to the workbook.
+ */
+function main(workbook: ExcelScript.Workbook, csv: string) {
+  let sheet = workbook.getWorksheet("Hoja1");
+
+  // Eliminar caracteres \r de Windows.
+  csv = csv.replace(/\r/g, "");
+
+  // Dividir cada línea en una fila.
+  let rows = csv.split("\n");
+
+  rows.forEach((value, index) => {
+    if (value.length > 0) {
+      // Dividir la fila usando tabulaciones (\t) como delimitadores.
+      let row = value.split("\t");
+
+      // Crear un array 2D con una fila.
+      let data: string[][] = [];
+      data.push(row);
+
+      // Insertar los datos en la hoja de cálculo.
+      let range = sheet.getRangeByIndexes(index, 0, 1, data[0].length);
+      range.setValues(data);
+    }
+  });
+}

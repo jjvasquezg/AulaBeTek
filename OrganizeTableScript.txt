@@ -1,0 +1,60 @@
+function main(workbook: ExcelScript.Workbook) {
+  let sheet = workbook.getActiveWorksheet();
+
+  // Obtener los valores adicionales de `1. Summary`.
+  const meetingDuration = sheet.getRange("B6").getText();
+  const meetingTitle = sheet.getRange("B2").getText();
+  const meetingDate = sheet.getRange("B4").getText();
+
+  // Crear el nombre dinámico de la tabla.
+  const tableName = `${meetingTitle}_${meetingDate}`.replace(/[^a-zA-Z0-9]/g, "_");
+
+  // Definir el inicio de los datos de participantes (desde A10).
+  const startRow = 9; // Fila 10 (índice 9)
+  const startColumn = 0; // Columna A (índice 0)
+  const maxColumnIndex = 6; // Última columna es G (índice 6).
+
+  let currentRow = startRow;
+
+  // Encontrar la primera fila vacía en la columna A para determinar el final de los participantes.
+  while (sheet.getRangeByIndexes(currentRow, startColumn, 1, 1).getValue() !== "") {
+    currentRow++;
+  }
+
+  // Copiar los datos de los participantes al principio de la hoja (empezando desde A1).
+  const dataRange = sheet.getRangeByIndexes(startRow, startColumn, currentRow - startRow, maxColumnIndex + 1);
+  const targetRange = sheet.getRangeByIndexes(0, 0, currentRow - startRow, maxColumnIndex + 1);
+  targetRange.setValues(dataRange.getValues());
+
+  // Agregar los valores adicionales (`Meeting Duration`, `Meeting Title`, `Meeting Date`) al final de cada fila.
+  for (let i = 0; i < currentRow - startRow; i++) {
+    sheet.getRangeByIndexes(i, maxColumnIndex + 1, 1, 1).setValue(meetingDuration);
+    sheet.getRangeByIndexes(i, maxColumnIndex + 2, 1, 1).setValue(meetingTitle);
+    sheet.getRangeByIndexes(i, maxColumnIndex + 3, 1, 1).setValue(meetingDate);
+  }
+
+  // Crear la tabla con los datos relevantes (desde A1 hasta la columna J).
+  const finalRowCount = currentRow - startRow;
+  const finalRange = sheet.getRangeByIndexes(0, 0, finalRowCount, maxColumnIndex + 4); // Incluye hasta la columna J.
+  let newTable = workbook.addTable(finalRange, true);
+
+  // Asignar el nombre dinámico a la tabla.
+  newTable.setName(tableName);
+
+  // Establecer los encabezados para las nuevas columnas.
+  const headerRange = newTable.getHeaderRowRange();
+  headerRange.getCell(0, maxColumnIndex + 1).setValue("Meeting Duration");
+  headerRange.getCell(0, maxColumnIndex + 2).setValue("Meeting Title");
+  headerRange.getCell(0, maxColumnIndex + 3).setValue("Meeting Date");
+
+  // Borrar todo el contenido por debajo de la última fila de la tabla.
+  const lastTableRow = finalRowCount;
+  const totalRows = sheet.getUsedRange().getRowCount();
+  const totalColumns = sheet.getUsedRange().getColumnCount();
+
+  // Si hay filas adicionales por debajo de la última fila de la tabla, se eliminan.
+  if (totalRows > lastTableRow) {
+    const rangeToClear = sheet.getRangeByIndexes(lastTableRow, 0, totalRows - lastTableRow, totalColumns);
+    rangeToClear.clear(ExcelScript.ClearApplyTo.all);
+  }
+}
